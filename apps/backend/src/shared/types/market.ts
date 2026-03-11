@@ -21,10 +21,24 @@ export interface NewsArticle {
   source: string
   datetime: number
   image: string | null
+  related: string
+  category: string
 }
 
 export interface LatestNews {
   news: NewsArticle[]
+}
+
+export interface NasdaqSymbol {
+  symbol: string
+  displaySymbol: string
+  description: string
+  type: string
+  mic: string
+}
+
+export interface NasdaqSymbols {
+  symbols: NasdaqSymbol[]
 }
 
 export interface QuoteData {

@@ -1,6 +1,7 @@
 import cors from 'cors'
 import express from 'express'
 import publicRoutes from './modules/public/public.routes'
+import protectedRoutes from './modules/protected/protected.routes'
 
 const app = express()
 
@@ -12,5 +13,6 @@ app.get('/', (_req, res) => {
 })
 
 app.use('/api/public', publicRoutes)
+app.use('/api/protected', protectedRoutes)
 
 export default app

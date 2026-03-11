@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
-import { CompanyNewsData, QuoteData } from '../shared/types/market'
+import { CompanyNewsData, NasdaqSymbol, QuoteData } from '../shared/types/market'
 
 interface FinnhubQuoteResponse {
   c: number
@@ -11,7 +11,7 @@ interface FinnhubQuoteResponse {
   pc: number
 }
 
-interface FinnhubNewsResponse {
+interface FinnhubCompanyNewsResponse {
   headline: string
   summary: string
   url: string
@@ -20,8 +20,35 @@ interface FinnhubNewsResponse {
   image?: string
 }
 
+interface FinnhubMarketNewsResponse {
+  category?: string
+  datetime: number
+  headline: string
+  id?: number
+  image?: string
+  related?: string
+  source: string
+  summary: string
+  url: string
+}
+
+interface FinnhubNewsResponse {
+  headline: string
+  summary: string
+  url: string
+  source: string
+  datetime: number
+  image?: string
+  related?: string
+  category?: string
+}
+
 interface FinnhubSymbolResponse {
   symbol?: string
+  displaySymbol?: string
+  description?: string
+  type?: string
+  mic?: string
 }
 
 export class FinnhubProvider {
@@ -63,7 +90,7 @@ export class FinnhubProvider {
   }
 
   async getCompanyNews(symbol: string, from: string, to: string): Promise<CompanyNewsData[]> {
-    const { data } = await this.httpClient.get<FinnhubNewsResponse[]>('/company-news', {
+    const { data } = await this.httpClient.get<FinnhubCompanyNewsResponse[]>('/company-news', {
       params: {
         symbol,
         from,
@@ -75,7 +102,27 @@ export class FinnhubProvider {
     return data
   }
 
-  async getUsSymbols(): Promise<string[]> {
+  async getMarketNews(category = 'general'): Promise<FinnhubNewsResponse[]> {
+    const { data } = await this.httpClient.get<FinnhubMarketNewsResponse[]>('/news', {
+      params: {
+        category,
+        token: this.apiKey,
+      },
+    })
+
+    return data.map((item) => ({
+      headline: item.headline,
+      summary: item.summary,
+      url: item.url,
+      source: item.source,
+      datetime: item.datetime,
+      image: item.image,
+      related: item.related,
+      category: item.category,
+    }))
+  }
+
+  async getUsSymbols(): Promise<NasdaqSymbol[]> {
     const { data } = await this.httpClient.get<FinnhubSymbolResponse[]>('/stock/symbol', {
       params: {
         exchange: 'US',
@@ -84,7 +131,13 @@ export class FinnhubProvider {
     })
 
     return data
-      .map((item) => item.symbol)
-      .filter((symbol): symbol is string => Boolean(symbol))
+      .filter((item) => Boolean(item.symbol))
+      .map((item) => ({
+        symbol: item.symbol || '',
+        displaySymbol: item.displaySymbol || item.symbol || '',
+        description: item.description || '',
+        type: item.type || '',
+        mic: item.mic || '',
+      }))
   }
 }

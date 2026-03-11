@@ -1,7 +1,12 @@
 import { Request, Response } from 'express'
 import { env } from '../../config/env'
 import { FinnhubProvider } from '../../providers/finnhub.provider'
-import { HealthResponseDto, LatestNewsResponseDto, MarketOverviewResponseDto } from './public.dto'
+import {
+  HealthResponseDto,
+  LatestNewsResponseDto,
+  MarketOverviewResponseDto,
+  NasdaqSymbolsResponseDto,
+} from './public.dto'
 import { PublicService } from './public.service'
 
 const publicService = new PublicService(
@@ -35,5 +40,20 @@ export const getLatestNews = async (
   } catch (error) {
     console.error('[PublicController] Failed to fetch latest news:', error)
     return res.status(500).json({ message: 'Failed to fetch latest news' } as any)
+  }
+}
+
+export const getNasdaqSymbols = async (
+  req: Request,
+  res: Response<NasdaqSymbolsResponseDto>
+): Promise<Response> => {
+  try {
+    const limitParam = Number(req.query.limit)
+    const limit = Number.isFinite(limitParam) ? limitParam : 200
+    const payload = await publicService.getNasdaqSymbols(limit)
+    return res.json(payload)
+  } catch (error) {
+    console.error('[PublicController] Failed to fetch symbols:', error)
+    return res.status(500).json({ message: 'Failed to fetch symbols' } as any)
   }
 }
