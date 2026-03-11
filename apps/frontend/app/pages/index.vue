@@ -23,7 +23,7 @@ interface DashboardPayload {
 const config = useRuntimeConfig()
 const pageTitle = 'Real-Time NASDAQ Intelligence'
 const pageDescription = 'Track top market movers and latest company headlines with Nexus Finance.'
-const canonicalUrl = config.public.siteUrl
+const canonicalUrl = String(config.public.siteUrl || 'http://localhost:3000')
 
 useSeoMeta({
   title: pageTitle,
@@ -37,9 +37,9 @@ useSeoMeta({
   twitterDescription: pageDescription,
 })
 
-useHead({
+useHead(() => ({
   link: [{ rel: 'canonical', href: canonicalUrl }],
-})
+}))
 
 const {
   data: dashboard,
