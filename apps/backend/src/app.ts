@@ -1,6 +1,6 @@
 import cors from 'cors'
 import express from 'express'
-import publicRoutes from './presentation/http/routes/public.routes'
+import publicRoutes from './modules/public/public.routes'
 
 const app = express()
 

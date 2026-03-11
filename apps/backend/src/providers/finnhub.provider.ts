@@ -1,9 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
-import {
-  CompanyNewsData,
-  MarketDataRepository,
-  QuoteData,
-} from '../../domain/repositories/market-data.repository'
+import { CompanyNewsData, QuoteData } from '../shared/types/market'
 
 interface FinnhubQuoteResponse {
   c: number
@@ -28,7 +24,7 @@ interface FinnhubSymbolResponse {
   symbol?: string
 }
 
-export class FinnhubMarketDataRepository implements MarketDataRepository {
+export class FinnhubProvider {
   private readonly httpClient: AxiosInstance
 
   constructor(

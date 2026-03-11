@@ -1,26 +1,15 @@
-# Server Architecture
+# Backend Architecture
 
-This backend follows a lightweight clean architecture split into four layers:
+This backend uses a clean, feature-first Node.js structure:
 
-- `src/domain`: core entities and repository contracts (interfaces only)
-- `src/application`: use cases with business rules
-- `src/infrastructure`: external implementations (Finnhub API) and dependency wiring
-- `src/presentation`: HTTP controllers/routes (Express adapters)
+- `src/modules/public`: public API module (routes, controller, service, dto)
+- `src/providers`: external integrations (Finnhub)
+- `src/shared`: shared types/utilities
+- `src/config`: environment configuration
 
-## Dependency Direction
+## Flow
 
-Dependencies point inward only:
-
-- `presentation -> application -> domain`
-- `infrastructure -> domain` and used only at composition time
-
-The domain layer never imports Express, Axios, or environment-specific code.
-
-## Where Interfaces Live
-
-- `src/domain/repositories/market-data.repository.ts`
-  - `MarketDataRepository` is the main port used by use cases.
-  - `FinnhubMarketDataRepository` is its adapter implementation in `infrastructure`.
+`routes -> controller -> service -> provider`
 
 ## API Endpoints
 
