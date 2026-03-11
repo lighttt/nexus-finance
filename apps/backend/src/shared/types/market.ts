@@ -41,6 +41,14 @@ export interface NasdaqSymbols {
   symbols: NasdaqSymbol[]
 }
 
+export interface MarketStatus {
+  exchange: string
+  isOpen: boolean
+  session: string | null
+  timestamp: number
+  timezone: string
+}
+
 export interface QuoteData {
   symbol: string
   currentPrice: number

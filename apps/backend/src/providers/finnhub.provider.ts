@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
-import { CompanyNewsData, NasdaqSymbol, QuoteData } from '../shared/types/market'
+import { CompanyNewsData, MarketStatus, NasdaqSymbol, QuoteData } from '../shared/types/market'
 
 interface FinnhubQuoteResponse {
   c: number
@@ -49,6 +49,14 @@ interface FinnhubSymbolResponse {
   description?: string
   type?: string
   mic?: string
+}
+
+interface FinnhubMarketStatusResponse {
+  exchange: string
+  isOpen: boolean
+  session: string | null
+  t: number
+  timezone: string
 }
 
 export class FinnhubProvider {
@@ -139,5 +147,22 @@ export class FinnhubProvider {
         type: item.type || '',
         mic: item.mic || '',
       }))
+  }
+
+  async getMarketStatus(exchange = 'US'): Promise<MarketStatus> {
+    const { data } = await this.httpClient.get<FinnhubMarketStatusResponse>('/stock/market-status', {
+      params: {
+        exchange,
+        token: this.apiKey,
+      },
+    })
+
+    return {
+      exchange: data.exchange,
+      isOpen: data.isOpen,
+      session: data.session,
+      timestamp: data.t,
+      timezone: data.timezone,
+    }
   }
 }

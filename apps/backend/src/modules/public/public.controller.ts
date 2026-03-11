@@ -5,6 +5,7 @@ import {
   HealthResponseDto,
   LatestNewsResponseDto,
   MarketOverviewResponseDto,
+  MarketStatusResponseDto,
   NasdaqSymbolsResponseDto,
 } from './public.dto'
 import { PublicService } from './public.service'
@@ -27,6 +28,19 @@ export const getMarketOverview = async (
   } catch (error) {
     console.error('[PublicController] Failed to fetch market overview:', error)
     return res.status(500).json({ message: 'Failed to fetch market overview' } as any)
+  }
+}
+
+export const getMarketStatus = async (
+  _req: Request,
+  res: Response<MarketStatusResponseDto>
+): Promise<Response> => {
+  try {
+    const payload = await publicService.getMarketStatus()
+    return res.json(payload)
+  } catch (error) {
+    console.error('[PublicController] Failed to fetch market status:', error)
+    return res.status(500).json({ message: 'Failed to fetch market status' } as any)
   }
 }
 

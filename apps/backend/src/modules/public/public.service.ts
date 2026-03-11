@@ -1,5 +1,5 @@
 import { FinnhubProvider } from '../../providers/finnhub.provider'
-import { LatestNews, MarketOverview, MarketQuote, NasdaqSymbols } from '../../shared/types/market'
+import { LatestNews, MarketOverview, MarketQuote, MarketStatus, NasdaqSymbols } from '../../shared/types/market'
 
 const DEFAULT_MARKET_MOVER_SYMBOL_LIMIT = 250
 const QUOTE_BATCH_SIZE = 25
@@ -13,6 +13,10 @@ export class PublicService {
 
   getHealth() {
     return { ok: true }
+  }
+
+  async getMarketStatus(): Promise<MarketStatus> {
+    return this.finnhubProvider.getMarketStatus('US')
   }
 
   async getMarketOverview(symbolLimit = DEFAULT_MARKET_MOVER_SYMBOL_LIMIT): Promise<MarketOverview> {
