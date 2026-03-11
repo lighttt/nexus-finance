@@ -57,7 +57,7 @@ onUnmounted(() => {
 
 <template>
   <header class="sticky top-0 z-30 border-b border-[var(--nf-line)] bg-[var(--nf-surface)]/90 backdrop-blur">
-    <nav class="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <nav class="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between px-4 py-2 sm:px-6 lg:px-8">
       <div class="flex items-center gap-6">
         <NuxtLink to="/" class="text-sm font-bold uppercase tracking-[0.2em] text-[var(--nf-ink)]">
           Nexus Finance
@@ -124,5 +124,27 @@ onUnmounted(() => {
         </ClerkLoaded>
       </div>
     </nav>
+
+    <ClerkLoaded>
+      <Show when="signed-in">
+        <div class="border-t border-[var(--nf-line)] px-4 py-2 sm:hidden">
+          <div class="flex items-center gap-2">
+            <NuxtLink
+              v-for="link in links"
+              :key="`mobile-${link.to}`"
+              :to="link.to"
+              class="rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors"
+              :class="
+                isActiveRoute(link.to)
+                  ? 'bg-[var(--nf-ink)] text-white'
+                  : 'bg-white text-[var(--nf-muted)] hover:text-[var(--nf-ink)]'
+              "
+            >
+              {{ link.label }}
+            </NuxtLink>
+          </div>
+        </div>
+      </Show>
+    </ClerkLoaded>
   </header>
 </template>

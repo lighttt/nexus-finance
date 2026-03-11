@@ -92,7 +92,7 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
 
     <section class="mt-4 rounded-2xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-4 shadow-sm">
       <div v-if="error" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
-        <p class="font-semibold">Unable to load protected NASDAQ table.</p>
+        <p class="font-semibold">Unable to load full NASDAQ table.</p>
         <button
           class="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-medium hover:bg-rose-100"
           @click="refresh()"
