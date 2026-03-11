@@ -1,4 +1,8 @@
 {
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs"
+  },
   // https://nuxt.com/docs/guide/concepts/typescript
   "references": []
 }

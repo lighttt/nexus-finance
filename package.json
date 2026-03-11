@@ -6,9 +6,9 @@
     "apps/backend"
   ],
   "scripts": {
-    "dev:frontend": "yarn --cwd apps/frontend dev",
-    "dev:backend": "yarn --cwd apps/backend dev",
-    "build:frontend": "yarn --cwd apps/frontend build",
-    "build:backend": "yarn --cwd apps/backend build"
+    "dev-frontend": "yarn --cwd apps/frontend dev",
+    "dev-backend": "yarn --cwd apps/backend dev",
+    "build-frontend": "yarn --cwd apps/frontend build",
+    "build-backend": "yarn --cwd apps/backend build"
   }
 }
