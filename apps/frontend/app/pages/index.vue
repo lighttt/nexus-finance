@@ -71,47 +71,22 @@ const {
 <template>
   <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <header class="mb-8 rounded-3xl border border-[var(--nf-line)] bg-white/65 px-6 py-7 backdrop-blur-sm">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--nf-muted)]">Nexus Finance</p>
-          <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Real-Time NASDAQ Intelligence</h1>
-          <p class="mt-2 max-w-2xl text-sm text-[var(--nf-muted)]">
-            Live market movers and curated company news powered by Finnhub.
-          </p>
-        </div>
-
-        <ClerkLoaded>
-          <div class="flex items-center gap-2">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button
-                  class="rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
-                >
-                  Sign in
-                </button>
-              </SignInButton>
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-          </div>
-        </ClerkLoaded>
-      </div>
-
-      <div class="mt-5 flex flex-wrap items-center gap-2">
-        <NuxtLink
-          to="/market"
-          class="rounded-lg bg-[var(--nf-ink)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-        >
-          View Full NASDAQ Table
-        </NuxtLink>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--nf-muted)]">Live Market Pulse</p>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Real-Time NASDAQ Intelligence</h1>
+        <p class="mt-2 max-w-2xl text-sm text-[var(--nf-muted)]">
+          Live market movers and curated company news powered by Finnhub.
+        </p>
       </div>
     </header>
 
-    <section v-if="pending" class="grid gap-4 md:grid-cols-2">
-      <div class="h-56 animate-pulse rounded-2xl border border-[var(--nf-line)] bg-white/70" />
-      <div class="h-56 animate-pulse rounded-2xl border border-[var(--nf-line)] bg-white/70" />
-      <div class="h-72 animate-pulse rounded-2xl border border-[var(--nf-line)] bg-white/70 md:col-span-2" />
+    <section v-if="pending" class="space-y-4">
+      <div class="grid gap-4 md:grid-cols-2">
+        <MarketListCard title="Top Gainers" :items="[]" :loading="true" />
+        <MarketListCard title="Top Losers" :items="[]" :loading="true" />
+      </div>
+
+      <NewsFeedCard :items="[]" :loading="true" />
     </section>
 
     <section v-else-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
@@ -127,8 +102,8 @@ const {
 
     <section v-else-if="dashboard" class="space-y-4">
       <div class="grid gap-4 md:grid-cols-2">
-        <MarketListCard title="Top Gainers" :items="dashboard.gainers" type="gainers" />
-        <MarketListCard title="Top Losers" :items="dashboard.losers" type="losers" />
+        <MarketListCard title="Top Gainers" :items="dashboard.gainers" />
+        <MarketListCard title="Top Losers" :items="dashboard.losers" />
       </div>
 
       <NewsFeedCard :items="dashboard.news" />

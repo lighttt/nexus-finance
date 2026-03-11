@@ -12,6 +12,7 @@ interface NewsItem {
 
 const props = defineProps<{
   items: NewsItem[]
+  loading?: boolean
 }>()
 
 const formatDate = (unixSeconds: number) =>
@@ -25,14 +26,24 @@ const formatDate = (unixSeconds: number) =>
 
 <template>
   <section class="rounded-2xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-5 shadow-sm">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-base font-semibold tracking-tight">Latest News</h2>
-      <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-[var(--nf-muted)]">
-        {{ props.items.length }} updates
-      </span>
-    </div>
+    <h2 class="mb-4 text-base font-semibold tracking-tight">Latest News</h2>
 
-    <ul v-if="props.items.length" class="grid gap-3 md:grid-cols-2">
+    <ul v-if="props.loading" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <li
+        v-for="i in 6"
+        :key="`news-loading-${i}`"
+        class="overflow-hidden rounded-xl border border-[var(--nf-line)] bg-white/80"
+      >
+        <div class="nf-shimmer h-40 w-full" />
+        <div class="space-y-2 p-3">
+          <div class="nf-shimmer h-4 w-full rounded-md" />
+          <div class="nf-shimmer h-4 w-5/6 rounded-md" />
+          <div class="nf-shimmer h-3 w-2/3 rounded-md" />
+        </div>
+      </li>
+    </ul>
+
+    <ul v-else-if="props.items.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <li
         v-for="article in props.items"
         :key="`${article.readMoreLink}-${article.datetime}`"

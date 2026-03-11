@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Header } from 'vue3-easy-data-table'
+// eslint-ts-ignore @typescript-eslint/no-default-export
+// @ts-expect-error
 import EasyDataTable from 'vue3-easy-data-table'
 
 definePageMeta({
@@ -38,6 +40,8 @@ const {
   lazy: true,
 })
 
+const tableLoading = computed(() => pending.value || (!table.value && !error.value))
+
 const filteredSymbols = computed(() => {
   const source = table.value?.symbols ?? []
   const query = search.value.trim().toLowerCase()
@@ -64,31 +68,12 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
 <template>
   <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <section class="rounded-3xl border border-[var(--nf-line)] bg-white/65 px-6 py-7 backdrop-blur-sm">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--nf-muted)]">Nexus Finance</p>
-          <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Full NASDAQ Table</h1>
-          <p class="mt-2 max-w-2xl text-sm text-[var(--nf-muted)]">
-            Access detailed information on all NASDAQ-listed companies. Search by symbol, name, or description to find the data you need.
-          </p>
-        </div>
-
-        <ClerkLoaded>
-          <div class="flex items-center gap-2">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button
-                  class="rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
-                >
-                  Sign in
-                </button>
-              </SignInButton>
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-          </div>
-        </ClerkLoaded>
+      <div>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Full NASDAQ Table</h1>
+        <p class="mt-2 max-w-2xl text-sm text-[var(--nf-muted)]">
+          Access detailed information on all NASDAQ-listed companies. Search by symbol, name, or description to find
+          the data you need.
+        </p>
       </div>
 
       <div class="mt-5">
@@ -121,12 +106,21 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
           Showing {{ filteredSymbols.length }} symbols
         </p>
 
-        <ClientOnly>
+        <div v-if="tableLoading" class="space-y-2 rounded-xl border border-[var(--nf-line)] bg-white/70 p-3">
+          <div v-for="i in 8" :key="`table-loading-${i}`" class="grid grid-cols-4 gap-3">
+            <div class="nf-shimmer h-5 rounded-md" />
+            <div class="nf-shimmer h-5 rounded-md" />
+            <div class="nf-shimmer h-5 rounded-md" />
+            <div class="nf-shimmer h-5 rounded-md" />
+          </div>
+        </div>
+
+        <ClientOnly v-else>
           <EasyDataTable
             class="nf-data-table"
             :headers="headers"
             :items="filteredSymbols"
-            :loading="pending"
+            :loading="tableLoading"
             fixed-header
             :table-height="560"
             table-class-name="customize-table"
