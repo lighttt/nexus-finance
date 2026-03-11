@@ -20,3 +20,43 @@ body {
     linear-gradient(135deg, #f7f9ef 0%, #eef5ee 45%, #e8f2ea 100%);
   font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
 }
+
+@keyframes nf-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.nf-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(216, 228, 211, 0.35) 0%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(216, 228, 211, 0.35) 100%
+  );
+  background-size: 200% 100%;
+  animation: nf-shimmer 1.35s linear infinite;
+}
+
+.nf-data-table {
+  --easy-table-border: 1px solid var(--nf-line);
+  --easy-table-row-border: 1px solid var(--nf-line);
+  --easy-table-header-background-color: #f6faf3;
+  --easy-table-header-font-color: #4f5c52;
+  --easy-table-body-row-background-color: rgba(255, 255, 255, 0.75);
+  --easy-table-body-row-font-color: #152218;
+  --easy-table-body-row-hover-background-color: #eef7e9;
+  --easy-table-footer-background-color: #f6faf3;
+  --easy-table-footer-font-color: #4f5c52;
+  --easy-table-scrollbar-thumb-color: #c4d5bd;
+  --easy-table-scrollbar-track-color: #ecf3e7;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.nf-data-table .nf-clickable-row {
+  cursor: pointer;
+}
