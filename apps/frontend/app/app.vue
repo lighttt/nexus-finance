@@ -18,5 +18,8 @@ useHead({
 
 <template>
   <NuxtRouteAnnouncer />
-  <NuxtPage />
+  <div class="min-h-screen">
+    <AppTopNav />
+    <NuxtPage />
+  </div>
 </template>

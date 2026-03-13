@@ -1,10 +1,37 @@
 <script setup lang="ts">
 import type { Header } from 'vue3-easy-data-table'
+// eslint-ts-ignore @typescript-eslint/no-default-export
+// @ts-expect-error
 import EasyDataTable from 'vue3-easy-data-table'
 
 definePageMeta({
   middleware: ['auth'],
 })
+
+const config = useRuntimeConfig()
+const pageTitle = 'Full NASDAQ Table | Nexus Finance'
+const pageDescription = 'Browse and sort NASDAQ-listed symbols with protected full-market access.'
+const canonicalUrl = computed(() => (config.public.siteUrl ? `${config.public.siteUrl}/market` : ''))
+
+useSeoMeta({
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
+  ogType: 'website',
+  ogUrl: () => canonicalUrl.value || undefined,
+  twitterCard: 'summary_large_image',
+  twitterTitle: pageTitle,
+  twitterDescription: pageDescription,
+})
+
+useHead(() =>
+  canonicalUrl.value
+    ? {
+        link: [{ rel: 'canonical', href: canonicalUrl.value }],
+      }
+    : {},
+)
 
 interface NasdaqSymbol {
   symbol: string
@@ -25,6 +52,7 @@ const headers: Header[] = [
   { text: 'Display', value: 'displaySymbol', sortable: true },
   { text: 'Description', value: 'description', sortable: true },
   { text: 'Type', value: 'type', sortable: true },
+  { text: '', value: 'open' },
 ]
 
 const {
@@ -37,6 +65,8 @@ const {
   server: false,
   lazy: true,
 })
+
+const tableLoading = computed(() => pending.value || (!table.value && !error.value))
 
 const filteredSymbols = computed(() => {
   const source = table.value?.symbols ?? []
@@ -55,40 +85,21 @@ const filteredSymbols = computed(() => {
   })
 })
 
-const openSymbolDetail = (item: NasdaqSymbol) => {
-  const symbol = encodeURIComponent(item.symbol)
-  return navigateTo(`/market/${symbol}`)
+const bodyItemClassName = (column: string) => {
+  if (column === 'open') return 'nf-open-cell'
+  return ''
 }
 </script>
 
 <template>
   <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <section class="rounded-3xl border border-[var(--nf-line)] bg-white/65 px-6 py-7 backdrop-blur-sm">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--nf-muted)]">Nexus Finance</p>
-          <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Full NASDAQ Table</h1>
-          <p class="mt-2 max-w-2xl text-sm text-[var(--nf-muted)]">
-            Access detailed information on all NASDAQ-listed companies. Search by symbol, name, or description to find the data you need.
-          </p>
-        </div>
-
-        <ClerkLoaded>
-          <div class="flex items-center gap-2">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button
-                  class="rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
-                >
-                  Sign in
-                </button>
-              </SignInButton>
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-          </div>
-        </ClerkLoaded>
+      <div>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Full NASDAQ Table</h1>
+        <p class="mt-2 max-w-2xl text-sm text-[var(--nf-muted)]">
+          Access detailed information on all NASDAQ-listed companies. Search by symbol, name, or description to find
+          the data you need.
+        </p>
       </div>
 
       <div class="mt-5">
@@ -107,7 +118,7 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
 
     <section class="mt-4 rounded-2xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-4 shadow-sm">
       <div v-if="error" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
-        <p class="font-semibold">Unable to load protected NASDAQ table.</p>
+        <p class="font-semibold">Unable to load full NASDAQ table.</p>
         <button
           class="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-medium hover:bg-rose-100"
           @click="refresh()"
@@ -121,16 +132,25 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
           Showing {{ filteredSymbols.length }} symbols
         </p>
 
-        <ClientOnly>
+        <div v-if="tableLoading" class="space-y-2 rounded-xl border border-[var(--nf-line)] bg-white/70 p-3">
+          <div v-for="i in 8" :key="`table-loading-${i}`" class="grid grid-cols-4 gap-3">
+            <div class="nf-shimmer h-5 rounded-md" />
+            <div class="nf-shimmer h-5 rounded-md" />
+            <div class="nf-shimmer h-5 rounded-md" />
+            <div class="nf-shimmer h-5 rounded-md" />
+          </div>
+        </div>
+
+        <ClientOnly v-else>
           <EasyDataTable
             class="nf-data-table"
             :headers="headers"
             :items="filteredSymbols"
-            :loading="pending"
+            :loading="tableLoading"
             fixed-header
             :table-height="560"
             table-class-name="customize-table"
-            body-row-class-name="nf-clickable-row"
+            :body-item-class-name="bodyItemClassName"
             header-text-direction="left"
             body-text-direction="left"
             alternating
@@ -139,8 +159,17 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
             rows-of-page-separator-message="of"
             :rows-per-page="15"
             :rows-items="[15, 30, 50]"
-            @click-row="openSymbolDetail"
           >
+            <template #item-open="item">
+              <NuxtLink
+                :to="item.symbol ? `/symbol/${encodeURIComponent(item.symbol)}` : '/market'"
+                class="row-open-btn inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--nf-line)] bg-white text-sm font-semibold text-[var(--nf-muted)]"
+                aria-label="Open symbol details"
+              >
+                <span class="row-arrow">→</span>
+              </NuxtLink>
+            </template>
+
             <template #loading>
               <div class="space-y-2 p-3">
                 <div v-for="i in 8" :key="`loading-${i}`" class="grid grid-cols-4 gap-3">

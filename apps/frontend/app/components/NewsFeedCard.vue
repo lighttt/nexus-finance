@@ -12,6 +12,7 @@ interface NewsItem {
 
 const props = defineProps<{
   items: NewsItem[]
+  loading?: boolean
 }>()
 
 const formatDate = (unixSeconds: number) =>
@@ -32,7 +33,22 @@ const formatDate = (unixSeconds: number) =>
       </span>
     </div>
 
-    <ul v-if="props.items.length" class="grid gap-3 md:grid-cols-2">
+    <ul v-if="props.loading" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <li
+        v-for="i in 6"
+        :key="`news-loading-${i}`"
+        class="overflow-hidden rounded-xl border border-[var(--nf-line)] bg-white/80"
+      >
+        <div class="nf-shimmer h-40 w-full" />
+        <div class="space-y-2 p-3">
+          <div class="nf-shimmer h-4 w-full rounded-md" />
+          <div class="nf-shimmer h-4 w-5/6 rounded-md" />
+          <div class="nf-shimmer h-3 w-2/3 rounded-md" />
+        </div>
+      </li>
+    </ul>
+
+    <ul v-else-if="props.items.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <li
         v-for="article in props.items"
         :key="`${article.readMoreLink}-${article.datetime}`"

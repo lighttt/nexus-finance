@@ -9,7 +9,7 @@ interface MarketItem {
 const props = defineProps<{
   title: string
   items: MarketItem[]
-  type: 'gainers' | 'losers'
+  loading?: boolean
 }>()
 
 const formatPrice = (price: number) =>
@@ -24,21 +24,25 @@ const formatChange = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed
 
 <template>
   <section class="rounded-2xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-5 shadow-sm">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-base font-semibold tracking-tight">{{ props.title }}</h2>
-      <span
-        class="rounded-full px-2.5 py-1 text-xs font-medium"
-        :class="
-          props.type === 'gainers'
-            ? 'bg-emerald-100 text-emerald-700'
-            : 'bg-rose-100 text-rose-700'
-        "
-      >
-        {{ props.items.length }} tracked
-      </span>
-    </div>
+    <h2 class="mb-4 text-base font-semibold tracking-tight">{{ props.title }}</h2>
 
-    <ul v-if="props.items.length" class="space-y-2">
+    <ul v-if="props.loading" class="space-y-2">
+      <li
+        v-for="i in 5"
+        :key="`market-loading-${i}`"
+        class="rounded-xl border border-[var(--nf-line)] bg-white/70 px-3 py-2.5"
+      >
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="nf-shimmer h-4 w-16 rounded-md" />
+            <div class="nf-shimmer h-3 w-20 rounded-md" />
+          </div>
+          <div class="nf-shimmer h-4 w-14 rounded-md" />
+        </div>
+      </li>
+    </ul>
+
+    <ul v-else-if="props.items.length" class="space-y-2">
       <li
         v-for="item in props.items"
         :key="item.symbol"

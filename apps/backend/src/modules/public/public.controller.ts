@@ -5,7 +5,9 @@ import {
   HealthResponseDto,
   LatestNewsResponseDto,
   MarketOverviewResponseDto,
+  MarketStatusResponseDto,
   NasdaqSymbolsResponseDto,
+  SymbolIntelligenceResponseDto,
 } from './public.dto'
 import { PublicService } from './public.service'
 
@@ -27,6 +29,19 @@ export const getMarketOverview = async (
   } catch (error) {
     console.error('[PublicController] Failed to fetch market overview:', error)
     return res.status(500).json({ message: 'Failed to fetch market overview' } as any)
+  }
+}
+
+export const getMarketStatus = async (
+  _req: Request,
+  res: Response<MarketStatusResponseDto>
+): Promise<Response> => {
+  try {
+    const payload = await publicService.getMarketStatus()
+    return res.json(payload)
+  } catch (error) {
+    console.error('[PublicController] Failed to fetch market status:', error)
+    return res.status(500).json({ message: 'Failed to fetch market status' } as any)
   }
 }
 
@@ -55,5 +70,24 @@ export const getNasdaqSymbols = async (
   } catch (error) {
     console.error('[PublicController] Failed to fetch symbols:', error)
     return res.status(500).json({ message: 'Failed to fetch symbols' } as any)
+  }
+}
+
+export const getSymbolIntelligence = async (
+  req: Request,
+  res: Response<SymbolIntelligenceResponseDto>
+): Promise<Response> => {
+  try {
+    const symbol = String(req.query.symbol || '').toUpperCase().trim()
+
+    if (!symbol) {
+      return res.status(400).json({ message: 'symbol query param is required' } as any)
+    }
+
+    const payload = await publicService.getSymbolIntelligence(symbol)
+    return res.json(payload)
+  } catch (error) {
+    console.error('[PublicController] Failed to fetch symbol intelligence:', error)
+    return res.status(500).json({ message: 'Failed to fetch symbol intelligence' } as any)
   }
 }
