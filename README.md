@@ -1,41 +1,91 @@
 # Nexus Finance
 
-Nuxt app + separate Node/Express backend.
+Real-time NASDAQ dashboard using **Nuxt 4 + Tailwind + Clerk** on the frontend and **Node/Express + Finnhub** on the backend.
 
-## Project Structure
+## What is implemented
 
-- `apps/frontend/` Nuxt frontend
-- `apps/backend/` backend API (clean architecture)
+- Open landing page (`/`)
+- Top 5 NASDAQ gainers and top 5 losers
+- Latest market news cards (image, summary, source, read more)
+- Full NASDAQ table (`/market`, signed-in only)
+- Clerk authentication (sign in / sign up)
+- Sticky/sortable NASDAQ table with symbol row action
+- Symbol detail page (`/symbol/[symbol]`, signed-in only) with quote, news, earnings, and analyst signals
+- Shared top navigation with market open/closed status
+- Page metadata and canonical tags for landing, market, and symbol pages
 
-## Frontend Conventions (Nuxt)
+## Monorepo structure
 
-- Pages: `apps/frontend/app/pages/**` in `kebab-case` (`market-overview.vue`)
-- Components: `PascalCase.vue` (`MarketOverviewCard.vue`)
-- Composables: `useXxx.ts` (`useMarketNews.ts`)
-- Plugins/Middleware: `kebab-case.ts` with Nuxt suffixes (`*.client.ts`, `*.server.ts`, `*.global.ts`)
+- `apps/frontend` - Nuxt 4 app (UI + server API routes)
+- `apps/backend` - Express API (Finnhub integration + Clerk token verification)
 
-## Backend Conventions
+## API overview
 
-- Domain: `apps/backend/src/domain/**` (entities + interfaces only)
-- Use cases: `apps/backend/src/application/use-cases/**`
-- Infrastructure adapters: `apps/backend/src/infrastructure/**`
-- HTTP layer: `apps/backend/src/presentation/http/**`
+Backend base routes:
 
-Dependency direction:
+- Public: `/api/public`
+- Protected: `/api/protected`
 
-- `presentation -> application -> domain`
-- `infrastructure -> domain` (wired in container/composition)
+Public endpoints:
 
-## Run
+- `GET /api/public/health`
+- `GET /api/public/market-status`
+- `GET /api/public/market-overview`
+- `GET /api/public/news`
 
-Frontend:
+Protected endpoints (Bearer token required):
+
+- `GET /api/protected/symbols?limit=300`
+- `GET /api/protected/symbol-intelligence?symbol=AAPL`
+
+Nuxt server routes that proxy protected backend calls:
+
+- `GET /api/nasdaq-table`
+- `GET /api/symbol-intelligence`
+
+## Environment variables
+
+Frontend (`apps/frontend/.env`):
 
 ```bash
-yarn dev:frontend
+NUXT_PUBLIC_API_BASE=http://localhost:4000/api/public
+NUXT_PUBLIC_API_PROTECTED_BASE=http://localhost:4000/api/protected
+NUXT_PUBLIC_SITE_URL=http://localhost:3000
+NUXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NUXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+NUXT_CLERK_SECRET_KEY=sk_test_...
 ```
 
-Backend:
+Backend (`apps/backend/.env`):
 
 ```bash
-yarn dev:backend
+PORT=4000
+FINNHUB_API_KEY=...
+CLERK_SECRET_KEY=sk_test_...
 ```
+
+## Run locally
+
+Install dependencies:
+
+```bash
+yarn install
+```
+
+Start frontend:
+
+```bash
+yarn dev-frontend
+```
+
+Start backend:
+
+```bash
+yarn dev-backend
+```
+
+## Notes
+
+- Use Node LTS (recommended: latest Node 20/22).
+- If protected routes return `401`, check Clerk keys and token flow first.

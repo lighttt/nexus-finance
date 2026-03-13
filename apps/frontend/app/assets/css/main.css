@@ -57,6 +57,23 @@ body {
   overflow: hidden;
 }
 
-.nf-data-table .nf-clickable-row {
-  cursor: pointer;
+.nf-data-table .nf-open-cell .row-open-btn {
+  opacity: 0.35;
+  transition: opacity 0.2s ease;
+}
+
+.nf-data-table tr:hover .nf-open-cell .row-open-btn {
+  opacity: 1;
+}
+
+.nf-data-table .nf-open-cell .row-arrow {
+  display: inline-block;
+  opacity: 0.55;
+  transform: translateX(-1px);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.nf-data-table tr:hover .nf-open-cell .row-arrow {
+  opacity: 1;
+  transform: translateX(0);
 }

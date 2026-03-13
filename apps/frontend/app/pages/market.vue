@@ -8,6 +8,31 @@ definePageMeta({
   middleware: ['auth'],
 })
 
+const config = useRuntimeConfig()
+const pageTitle = 'Full NASDAQ Table | Nexus Finance'
+const pageDescription = 'Browse and sort NASDAQ-listed symbols with protected full-market access.'
+const canonicalUrl = computed(() => (config.public.siteUrl ? `${config.public.siteUrl}/market` : ''))
+
+useSeoMeta({
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
+  ogType: 'website',
+  ogUrl: () => canonicalUrl.value || undefined,
+  twitterCard: 'summary_large_image',
+  twitterTitle: pageTitle,
+  twitterDescription: pageDescription,
+})
+
+useHead(() =>
+  canonicalUrl.value
+    ? {
+        link: [{ rel: 'canonical', href: canonicalUrl.value }],
+      }
+    : {},
+)
+
 interface NasdaqSymbol {
   symbol: string
   displaySymbol: string
@@ -27,6 +52,7 @@ const headers: Header[] = [
   { text: 'Display', value: 'displaySymbol', sortable: true },
   { text: 'Description', value: 'description', sortable: true },
   { text: 'Type', value: 'type', sortable: true },
+  { text: '', value: 'open' },
 ]
 
 const {
@@ -59,9 +85,9 @@ const filteredSymbols = computed(() => {
   })
 })
 
-const openSymbolDetail = (item: NasdaqSymbol) => {
-  const symbol = encodeURIComponent(item.symbol)
-  return navigateTo(`/market/${symbol}`)
+const bodyItemClassName = (column: string) => {
+  if (column === 'open') return 'nf-open-cell'
+  return ''
 }
 </script>
 
@@ -124,7 +150,7 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
             fixed-header
             :table-height="560"
             table-class-name="customize-table"
-            body-row-class-name="nf-clickable-row"
+            :body-item-class-name="bodyItemClassName"
             header-text-direction="left"
             body-text-direction="left"
             alternating
@@ -133,8 +159,17 @@ const openSymbolDetail = (item: NasdaqSymbol) => {
             rows-of-page-separator-message="of"
             :rows-per-page="15"
             :rows-items="[15, 30, 50]"
-            @click-row="openSymbolDetail"
           >
+            <template #item-open="item">
+              <NuxtLink
+                :to="item.symbol ? `/symbol/${encodeURIComponent(item.symbol)}` : '/market'"
+                class="row-open-btn inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--nf-line)] bg-white text-sm font-semibold text-[var(--nf-muted)]"
+                aria-label="Open symbol details"
+              >
+                <span class="row-arrow">→</span>
+              </NuxtLink>
+            </template>
+
             <template #loading>
               <div class="space-y-2 p-3">
                 <div v-for="i in 8" :key="`loading-${i}`" class="grid grid-cols-4 gap-3">

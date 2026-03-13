@@ -91,7 +91,7 @@ const {
 
     <section v-else-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
       <p class="font-semibold">Unable to load dashboard data.</p>
-      <p class="mt-1 text-sm">Check backend availability and `NUXT_PUBLIC_API_BASE` configuration.</p>
+      <p class="mt-1 text-sm">Something went wrong. Please try again later.</p>
       <button
         class="mt-4 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-medium hover:bg-rose-100"
         @click="refresh()"

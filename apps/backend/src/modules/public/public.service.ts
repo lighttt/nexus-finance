@@ -1,5 +1,13 @@
 import { FinnhubProvider } from '../../providers/finnhub.provider'
-import { LatestNews, MarketOverview, MarketQuote, MarketStatus, NasdaqSymbols } from '../../shared/types/market'
+import {
+  LatestNews,
+  MarketOverview,
+  MarketQuote,
+  MarketStatus,
+  NasdaqSymbols,
+  SymbolIntelligence,
+  SymbolNewsItem,
+} from '../../shared/types/market'
 
 const DEFAULT_MARKET_MOVER_SYMBOL_LIMIT = 250
 const QUOTE_BATCH_SIZE = 25
@@ -86,6 +94,182 @@ export class PublicService {
       .slice(0, Math.max(1, Math.min(limit, 1000)))
 
     return { symbols }
+  }
+
+  async getSymbolIntelligence(symbol: string): Promise<SymbolIntelligence> {
+    const normalizedSymbol = symbol.toUpperCase().trim()
+    const now = new Date()
+    const newsTo = this.formatDate(now)
+    const newsFrom = this.formatDate(new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000))
+    const earningsTo = this.formatDate(new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000))
+
+    const [quote, companyNewsRaw, earnings, recommendationTrend, earningsCalendar] = await Promise.all([
+      this.finnhubProvider.getQuote(normalizedSymbol),
+      this.finnhubProvider.getCompanyNews(normalizedSymbol, newsFrom, newsTo),
+      this.finnhubProvider.getCompanyEarnings(normalizedSymbol, 4),
+      this.finnhubProvider.getRecommendationTrends(normalizedSymbol),
+      this.finnhubProvider.getEarningsCalendar(normalizedSymbol, newsTo, earningsTo),
+    ])
+
+    const companyNews: SymbolNewsItem[] = companyNewsRaw
+      .filter((item) => item.headline && item.url)
+      .sort((a, b) => b.datetime - a.datetime)
+      .slice(0, 10)
+      .map((item) => ({
+        title: item.headline,
+        summary: item.summary,
+        readMoreLink: item.url,
+        source: item.source,
+        datetime: item.datetime,
+        image: item.image ?? null,
+      }))
+
+    const sentimentBias = this.estimateNewsSentiment(companyNews)
+    const sentimentDivergence = this.calculateSentimentDivergence(sentimentBias, quote.changePercent)
+
+    const nextEarnings = earningsCalendar
+      .filter((event) => event.date >= newsTo)
+      .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null
+
+    const eventRisk = this.calculateEventRisk(earnings, recommendationTrend, nextEarnings)
+    const downsideProtection = this.calculateDownsideProtection(quote.changePercent, sentimentDivergence)
+
+    return {
+      symbol: normalizedSymbol,
+      quote: {
+        price: quote.currentPrice,
+        change: quote.change,
+        changePercent: quote.changePercent,
+        dayHigh: quote.high,
+        dayLow: quote.low,
+        dayOpen: quote.open,
+        previousClose: quote.previousClose,
+      },
+      companyNews,
+      earnings,
+      recommendationTrend: recommendationTrend.slice(0, 3),
+      nextEarnings,
+      insight: {
+        sentimentDivergence,
+        eventRisk,
+        downsideProtection,
+      },
+      bedrockInput: {
+        symbol: normalizedSymbol,
+        quote: {
+          price: quote.currentPrice,
+          change: quote.change,
+          changePercent: quote.changePercent,
+          dayHigh: quote.high,
+          dayLow: quote.low,
+          dayOpen: quote.open,
+          previousClose: quote.previousClose,
+        },
+        topNews: companyNews.slice(0, 5).map((item) => ({
+          headline: item.title,
+          source: item.source,
+          publishedAt: item.datetime,
+        })),
+        earningsHistory: earnings.slice(0, 4).map((item) => ({
+          period: item.period,
+          surprisePercent: item.surprisePercent,
+        })),
+        recommendationTrend: recommendationTrend.slice(0, 3).map((item) => ({
+          period: item.period,
+          buy: item.buy,
+          hold: item.hold,
+          sell: item.sell,
+          strongBuy: item.strongBuy,
+          strongSell: item.strongSell,
+        })),
+        nextEarningsDate: nextEarnings?.date ?? null,
+      },
+    }
+  }
+
+  private formatDate(date: Date): string {
+    const year = date.getUTCFullYear()
+    const month = `${date.getUTCMonth() + 1}`.padStart(2, '0')
+    const day = `${date.getUTCDate()}`.padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  private estimateNewsSentiment(news: SymbolNewsItem[]): number {
+    if (!news.length) return 0
+
+    const positiveTerms = ['beat', 'growth', 'surge', 'strong', 'upgrade', 'record', 'profit', 'gain']
+    const negativeTerms = ['miss', 'drop', 'fall', 'weak', 'downgrade', 'risk', 'loss', 'decline']
+
+    let score = 0
+    for (const item of news) {
+      const text = `${item.title} ${item.summary}`.toLowerCase()
+      for (const word of positiveTerms) {
+        if (text.includes(word)) score += 1
+      }
+      for (const word of negativeTerms) {
+        if (text.includes(word)) score -= 1
+      }
+    }
+
+    const normalized = score / Math.max(news.length * 3, 1)
+    return Math.max(-1, Math.min(1, normalized))
+  }
+
+  private calculateSentimentDivergence(sentimentBias: number, changePercent: number): number {
+    const priceDirection = changePercent === 0 ? 0 : changePercent > 0 ? 1 : -1
+    const sentimentDirection = sentimentBias === 0 ? 0 : sentimentBias > 0 ? 1 : -1
+
+    if (priceDirection === 0 || sentimentDirection === 0) {
+      return Math.min(100, Math.round(Math.abs(changePercent) * 10))
+    }
+
+    const aligned = priceDirection === sentimentDirection
+    if (aligned) {
+      return Math.max(0, 30 - Math.round(Math.abs(changePercent) * 3))
+    }
+
+    return Math.min(100, 55 + Math.round(Math.abs(changePercent) * 6))
+  }
+
+  private calculateEventRisk(
+    earnings: Array<{ surprisePercent: number | null }>,
+    recommendation: Array<{ buy: number; hold: number; sell: number; strongBuy: number; strongSell: number }>,
+    nextEarnings: { date: string } | null,
+  ): 'Low' | 'Medium' | 'High' {
+    const surpriseValues = earnings.map((item) => Math.abs(item.surprisePercent ?? 0))
+    const avgSurprise = surpriseValues.length
+      ? surpriseValues.reduce((sum, value) => sum + value, 0) / surpriseValues.length
+      : 0
+
+    const topRecommendation = recommendation[0]
+    const analystDispersion = topRecommendation
+      ? Math.abs((topRecommendation.strongBuy + topRecommendation.buy) - (topRecommendation.strongSell + topRecommendation.sell))
+      : 0
+
+    let score = avgSurprise
+
+    if (nextEarnings) {
+      const daysUntil = Math.max(
+        0,
+        Math.ceil((new Date(`${nextEarnings.date}T00:00:00Z`).getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
+      )
+      if (daysUntil <= 7) score += 20
+      else if (daysUntil <= 21) score += 10
+    }
+
+    if (analystDispersion <= 2) score += 8
+
+    if (score >= 25) return 'High'
+    if (score >= 12) return 'Medium'
+    return 'Low'
+  }
+
+  private calculateDownsideProtection(changePercent: number, divergenceScore: number): 'Low' | 'Medium' | 'High' {
+    const stressScore = Math.max(0, -changePercent) * 3 + divergenceScore * 0.6
+
+    if (stressScore >= 45) return 'Low'
+    if (stressScore >= 20) return 'Medium'
+    return 'High'
   }
 
   private async getQuotesInBatches(symbols: string[]): Promise<
