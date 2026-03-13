@@ -26,7 +26,12 @@ const formatDate = (unixSeconds: number) =>
 
 <template>
   <section class="rounded-2xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-5 shadow-sm">
-    <h2 class="mb-4 text-base font-semibold tracking-tight">Latest News</h2>
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-base font-semibold tracking-tight">Latest News</h2>
+      <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-[var(--nf-muted)]">
+        {{ props.items.length }} updates
+      </span>
+    </div>
 
     <ul v-if="props.loading" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <li
