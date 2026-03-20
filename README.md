@@ -11,6 +11,7 @@ Real-time NASDAQ dashboard using **Nuxt 4 + Tailwind + Clerk** on the frontend a
 - Clerk authentication (sign in / sign up)
 - Sticky/sortable NASDAQ table with symbol row action
 - Symbol detail page (`/symbol/[symbol]`, signed-in only) with quote, news, earnings, and analyst signals
+- Optional AWS Bedrock AI insight on the symbol detail page
 - Shared top navigation with market open/closed status
 - Page metadata and canonical tags for landing, market, and symbol pages
 
@@ -63,6 +64,8 @@ Backend (`apps/backend/.env`):
 PORT=4000
 FINNHUB_API_KEY=...
 CLERK_SECRET_KEY=sk_test_...
+AWS_REGION=ap-southeast-2
+AWS_BEARER_TOKEN_BEDROCK=your_bedrock_api_key
 ```
 
 ## Run locally
@@ -89,3 +92,4 @@ yarn dev-backend
 
 - Use Node LTS (recommended: latest Node 20/22).
 - If protected routes return `401`, check Clerk keys and token flow first.
+- Bedrock is configured with a bearer token via `AWS_BEARER_TOKEN_BEDROCK`.

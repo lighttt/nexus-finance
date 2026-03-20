@@ -1,10 +1,11 @@
 import { Router } from 'express'
 import { requireClerkToken } from '../../middleware/clerk-auth.middleware'
-import { getNasdaqSymbols, getSymbolIntelligence } from '../public/public.controller'
+import { getLatestNews, getNasdaqSymbols, getSymbolIntelligence } from '../public/public.controller'
 
 const router = Router()
 
 router.use(requireClerkToken)
+router.get('/news', getLatestNews)
 router.get('/symbols', getNasdaqSymbols)
 router.get('/symbol-intelligence', getSymbolIntelligence)
 

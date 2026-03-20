@@ -21,6 +21,7 @@ interface DashboardPayload {
     related: string
     category: string
   }[]
+  hasMore: boolean
 }
 
 const config = useRuntimeConfig()
@@ -45,6 +46,8 @@ useHead(() => ({
   link: canonicalUrl ? [{ rel: 'canonical', href: canonicalUrl }] : [],
 }))
 
+const { isSignedIn } = useAuth()
+
 const {
   data: dashboard,
   pending,
@@ -57,13 +60,14 @@ const {
 
   const [marketOverview, latestNews] = await Promise.all([
     $fetch<{ gainers: MarketItem[]; losers: MarketItem[] }>(`${apiBase}/market-overview`),
-    $fetch<{ news: DashboardPayload['news'] }>(`${apiBase}/news`),
+    $fetch<{ news: DashboardPayload['news']; hasMore: boolean }>(`${apiBase}/news`),
   ])
 
   return {
     gainers: marketOverview.gainers,
     losers: marketOverview.losers,
     news: latestNews.news,
+    hasMore: latestNews.hasMore,
   }
 })
 </script>
@@ -107,6 +111,15 @@ const {
       </div>
 
       <NewsFeedCard :items="dashboard.news" />
+
+      <div v-if="isSignedIn" class="flex justify-end">
+        <NuxtLink
+          to="/news"
+          class="inline-flex rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+        >
+          See all news
+        </NuxtLink>
+      </div>
     </section>
   </main>
 </template>
