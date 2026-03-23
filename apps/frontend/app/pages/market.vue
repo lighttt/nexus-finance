@@ -67,7 +67,6 @@ const {
   server: false,
   lazy: true,
   immediate: false,
-  default: () => tableCache.value ?? undefined,
 })
 
 const retrying = ref(false)
@@ -115,6 +114,11 @@ watch(table, (value) => {
 }, { immediate: true })
 
 onMounted(async () => {
+  if (tableCache.value) {
+    table.value = tableCache.value
+    return
+  }
+
   if (!table.value && !pending.value) {
     await execute()
   }

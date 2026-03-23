@@ -52,7 +52,6 @@ const {
   server: false,
   lazy: true,
   immediate: false,
-  default: () => symbolCache.value[symbol.value] ?? undefined,
 })
 
 watch([symbol, intelligence], ([currentSymbol, value]) => {
@@ -73,6 +72,12 @@ watch(symbol, async (currentSymbol) => {
 })
 
 onMounted(async () => {
+  const cached = symbolCache.value[symbol.value]
+  if (cached) {
+    intelligence.value = cached
+    return
+  }
+
   if (!intelligence.value && !pending.value) {
     await execute()
   }
