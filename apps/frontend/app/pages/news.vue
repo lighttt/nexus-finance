@@ -3,11 +3,6 @@ definePageMeta({
   middleware: ['auth'],
 })
 
-const route = useRoute()
-const page = computed(() => {
-  const raw = Number(route.query.page)
-  return Number.isFinite(raw) && raw > 0 ? raw : 1
-})
 const limit = 12
 
 interface NewsItem {
@@ -29,19 +24,108 @@ interface NewsPayload {
   hasMore: boolean
 }
 
-const {
-  data,
-  pending,
-  error,
-  refresh,
-} = useFetch<NewsPayload>('/api/news', {
-  query: computed(() => ({ page: String(page.value), limit: String(limit) })),
-  server: false,
-  lazy: true,
+const items = ref<NewsItem[]>([])
+const currentPage = ref(0)
+const total = ref(0)
+const hasMore = ref(true)
+const initialPending = ref(true)
+const loadingMore = ref(false)
+const errorMessage = ref('')
+const sentinel = ref<HTMLElement | null>(null)
+
+let observer: IntersectionObserver | null = null
+
+const loadedCountLabel = computed(() => `${items.value.length} of ${total.value || 0}`)
+
+const loadNewsPage = async (page: number, mode: 'replace' | 'append' = 'append') => {
+  if (mode === 'append' && (loadingMore.value || !hasMore.value)) {
+    return
+  }
+
+  if (mode === 'replace') {
+    initialPending.value = true
+  } else {
+    loadingMore.value = true
+  }
+
+  errorMessage.value = ''
+
+  try {
+    const payload = await $fetch<NewsPayload>('/api/news', {
+      query: {
+        page: String(page),
+        limit: String(limit),
+      },
+    })
+
+    const incoming = payload.news
+    if (mode === 'replace') {
+      items.value = incoming
+    } else {
+      const existingKeys = new Set(items.value.map((item) => `${item.readMoreLink}-${item.datetime}`))
+      const deduped = incoming.filter((item) => !existingKeys.has(`${item.readMoreLink}-${item.datetime}`))
+      items.value = [...items.value, ...deduped]
+    }
+
+    currentPage.value = payload.page
+    total.value = payload.total
+    hasMore.value = payload.hasMore
+  } catch {
+    errorMessage.value = 'Could not load the news right now.'
+  } finally {
+    initialPending.value = false
+    loadingMore.value = false
+  }
+}
+
+const loadMore = async () => {
+  if (!hasMore.value || loadingMore.value) return
+  await loadNewsPage(currentPage.value + 1, 'append')
+}
+
+const retry = async () => {
+  if (!items.value.length) {
+    await loadNewsPage(1, 'replace')
+    return
+  }
+
+  await loadMore()
+}
+
+const setupObserver = () => {
+  observer?.disconnect()
+
+  if (!import.meta.client || !sentinel.value || typeof IntersectionObserver === 'undefined') {
+    return
+  }
+
+  observer = new IntersectionObserver(
+    async (entries) => {
+      const [entry] = entries
+      if (entry?.isIntersecting) {
+        await loadMore()
+      }
+    },
+    {
+      rootMargin: '320px 0px',
+    },
+  )
+
+  observer.observe(sentinel.value)
+}
+
+watch(sentinel, () => {
+  setupObserver()
 })
 
-const previousPage = computed(() => Math.max(1, page.value - 1))
-const nextPage = computed(() => page.value + 1)
+onMounted(async () => {
+  await loadNewsPage(1, 'replace')
+  setupObserver()
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+})
 </script>
 
 <template>
@@ -50,9 +134,9 @@ const nextPage = computed(() => page.value + 1)
       <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--nf-muted)]">Market News</p>
-          <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">All Latest News</h1>
+          <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Latest News</h1>
           <p class="mt-2 max-w-2xl text-sm text-[var(--nf-muted)]">
-            Browse the full news stream with pagination, summaries, and direct source links.
+            Browse the full news feed with more stories loading as you scroll.
           </p>
         </div>
 
@@ -65,41 +149,47 @@ const nextPage = computed(() => page.value + 1)
       </div>
     </section>
 
-    <section class="mt-4">
-      <NewsFeedCard :items="data?.news || []" :loading="pending" />
+    <section class="mt-4 space-y-4">
+      <NewsFeedCard :items="items" :loading="initialPending" />
 
-      <div v-if="error" class="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
-        <p class="font-semibold">Unable to load news.</p>
+      <div v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+        <p class="font-semibold">{{ errorMessage }}</p>
         <button
           class="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-medium hover:bg-rose-100"
-          @click="refresh()"
+          @click="retry"
         >
           Retry
         </button>
       </div>
 
-      <div v-if="data" class="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-[var(--nf-line)] bg-white/80 p-4">
-        <p class="text-sm text-[var(--nf-muted)]">
-          Page {{ data.page }} · Showing {{ data.news.length }} of {{ data.total }} stories
-        </p>
+      <div
+        v-if="!initialPending"
+        class="rounded-2xl border border-[var(--nf-line)] bg-white/80 p-4"
+      >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-sm text-[var(--nf-muted)]">
+            Loaded {{ loadedCountLabel }}
+            <span v-if="loadingMore"> · Loading more stories…</span>
+            <span v-else-if="!hasMore && items.length"> · You are all caught up</span>
+          </p>
 
-        <div class="flex items-center gap-2">
-          <NuxtLink
-            :to="page > 1 ? `/news?page=${previousPage}` : '/news?page=1'"
-            class="rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium"
-            :class="page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-slate-50'"
+          <button
+            v-if="hasMore"
+            class="inline-flex rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="loadingMore"
+            @click="loadMore"
           >
-            Previous
-          </NuxtLink>
-          <NuxtLink
-            :to="`/news?page=${nextPage}`"
-            class="rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium"
-            :class="!data.hasMore ? 'pointer-events-none opacity-50' : 'hover:bg-slate-50'"
-          >
-            Next
-          </NuxtLink>
+            {{ loadingMore ? 'Loading...' : 'Load more' }}
+          </button>
         </div>
       </div>
+
+      <div
+        v-if="hasMore"
+        ref="sentinel"
+        class="h-4 w-full"
+        aria-hidden="true"
+      />
     </section>
   </main>
 </template>

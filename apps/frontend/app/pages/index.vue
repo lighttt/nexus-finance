@@ -46,7 +46,6 @@ useHead(() => ({
   link: canonicalUrl ? [{ rel: 'canonical', href: canonicalUrl }] : [],
 }))
 
-const { isSignedIn } = useAuth()
 
 const {
   data: dashboard,
@@ -112,14 +111,7 @@ const {
 
       <NewsFeedCard :items="dashboard.news" />
 
-      <div v-if="isSignedIn" class="flex justify-end">
-        <NuxtLink
-          to="/news"
-          class="inline-flex rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
-        >
-          See all news
-        </NuxtLink>
-      </div>
+      
     </section>
   </main>
 </template>

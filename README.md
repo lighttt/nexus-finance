@@ -8,6 +8,7 @@ Real-time NASDAQ dashboard using **Nuxt 4 + Tailwind + Clerk** on the frontend a
 - Top 5 NASDAQ gainers and top 5 losers
 - Latest market news cards (image, summary, source, read more)
 - Full NASDAQ table (`/market`, signed-in only)
+- Full news feed (`/news`, signed-in only) with lazy loading
 - Clerk authentication (sign in / sign up)
 - Sticky/sortable NASDAQ table with symbol row action
 - Symbol detail page (`/symbol/[symbol]`, signed-in only) with quote, news, earnings, and analyst signals
@@ -37,11 +38,13 @@ Public endpoints:
 Protected endpoints (Bearer token required):
 
 - `GET /api/protected/symbols?limit=300`
+- `GET /api/protected/news?page=1&limit=10`
 - `GET /api/protected/symbol-intelligence?symbol=AAPL`
 
 Nuxt server routes that proxy protected backend calls:
 
 - `GET /api/nasdaq-table`
+- `GET /api/news`
 - `GET /api/symbol-intelligence`
 
 ## Environment variables
@@ -93,3 +96,4 @@ yarn dev-backend
 - Use Node LTS (recommended: latest Node 20/22).
 - If protected routes return `401`, check Clerk keys and token flow first.
 - Bedrock is configured with a bearer token via `AWS_BEARER_TOKEN_BEDROCK`.
+- The landing page stays open; `/market`, `/news`, and `/symbol/[symbol]` require sign-in.
