@@ -14,9 +14,19 @@ const DEFAULT_MARKET_MOVER_SYMBOL_LIMIT = 250
 const QUOTE_BATCH_SIZE = 25
 const QUOTE_BATCH_DELAY_MS = 1200
 const MARKET_OVERVIEW_CACHE_TTL_MS = 60 * 1000
+const MARKET_NEWS_CACHE_TTL_MS = 60 * 1000
+const NASDAQ_SYMBOLS_CACHE_TTL_MS = 15 * 60 * 1000
+const SYMBOL_INTELLIGENCE_CACHE_TTL_MS = 5 * 60 * 1000
 
 export class PublicService {
   private marketOverviewCache: { expiresAt: number; data: MarketOverview } | null = null
+  private marketOverviewInFlight: Promise<MarketOverview> | null = null
+  private latestNewsCache: { expiresAt: number; data: LatestNews['news'] } | null = null
+  private latestNewsInFlight: Promise<LatestNews['news']> | null = null
+  private nasdaqSymbolsCache = new Map<number, { expiresAt: number; data: NasdaqSymbols }>()
+  private nasdaqSymbolsInFlight = new Map<number, Promise<NasdaqSymbols>>()
+  private symbolIntelligenceCache = new Map<string, { expiresAt: number; data: SymbolIntelligence }>()
+  private symbolIntelligenceInFlight = new Map<string, Promise<SymbolIntelligence>>()
 
   constructor(
     private readonly finnhubProvider: FinnhubProvider,
@@ -33,37 +43,14 @@ export class PublicService {
 
   async getMarketOverview(symbolLimit = DEFAULT_MARKET_MOVER_SYMBOL_LIMIT): Promise<MarketOverview> {
     const cached = this.marketOverviewCache
-    if (cached && cached.expiresAt > Date.now()) {
+    if (cached) {
+      if (cached.expiresAt <= Date.now() && !this.marketOverviewInFlight) {
+        void this.refreshMarketOverview(symbolLimit)
+      }
       return cached.data
     }
 
-    const nasdaqSymbols = await this.getNasdaqSymbols(symbolLimit)
-    const symbols = nasdaqSymbols.symbols.map((item) => item.symbol)
-    const quotes = await this.getQuotesInBatches(symbols)
-
-    const validQuotes: MarketQuote[] = quotes
-      .filter((quote) => typeof quote.currentPrice === 'number' && !Number.isNaN(quote.currentPrice) && quote.currentPrice > 0)
-      .map((quote) => ({
-        symbol: quote.symbol,
-        price: quote.currentPrice,
-        change: quote.change,
-        changePercent: quote.changePercent,
-        high: quote.high,
-        low: quote.low,
-        open: quote.open,
-        previousClose: quote.previousClose,
-      }))
-
-    const gainers = [...validQuotes].sort((a, b) => b.changePercent - a.changePercent).slice(0, 5)
-    const losers = [...validQuotes].sort((a, b) => a.changePercent - b.changePercent).slice(0, 5)
-
-    const overview = { gainers, losers }
-    this.marketOverviewCache = {
-      data: overview,
-      expiresAt: Date.now() + MARKET_OVERVIEW_CACHE_TTL_MS,
-    }
-
-    return overview
+    return this.refreshMarketOverview(symbolLimit)
   }
 
   async getLatestNews(): Promise<LatestNews> {
@@ -71,23 +58,9 @@ export class PublicService {
   }
 
   async getLatestNewsPage(page = 1, limit = 10): Promise<LatestNews> {
-    const rawNews = await this.finnhubProvider.getMarketNews('general')
+    const allNews = await this.getCachedLatestNews()
     const normalizedPage = Math.max(1, page)
     const normalizedLimit = Math.max(1, Math.min(limit, 30))
-
-    const allNews = rawNews
-      .filter((item) => item.headline && item.summary && item.url)
-      .sort((a, b) => b.datetime - a.datetime)
-      .map((item) => ({
-        title: item.headline,
-        summary: item.summary,
-        readMoreLink: item.url,
-        source: item.source,
-        datetime: item.datetime,
-        image: item.image ?? null,
-        related: item.related ?? '',
-        category: item.category ?? 'general',
-      }))
 
     const startIndex = (normalizedPage - 1) * normalizedLimit
     const news = allNews.slice(startIndex, startIndex + normalizedLimit)
@@ -102,20 +75,73 @@ export class PublicService {
   }
 
   async getNasdaqSymbols(limit = 200): Promise<NasdaqSymbols> {
-    const rawSymbols = await this.finnhubProvider.getUsSymbols()
+    const normalizedLimit = Math.max(1, Math.min(limit, 1000))
+    const cached = this.nasdaqSymbolsCache.get(normalizedLimit)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data
+    }
 
-    const onlyNasdaq = rawSymbols.filter((symbol) => symbol.mic === 'XNAS')
-    const source = onlyNasdaq.length ? onlyNasdaq : rawSymbols
+    const inFlight = this.nasdaqSymbolsInFlight.get(normalizedLimit)
+    if (inFlight) {
+      return inFlight
+    }
 
-    const symbols = source
-      .filter((item) => item.symbol && item.displaySymbol && item.description)
-      .slice(0, Math.max(1, Math.min(limit, 1000)))
+    const request = (async () => {
+      const rawSymbols = await this.finnhubProvider.getUsSymbols()
 
-    return { symbols }
+      const onlyNasdaq = rawSymbols.filter((symbol) => symbol.mic === 'XNAS')
+      const source = onlyNasdaq.length ? onlyNasdaq : rawSymbols
+
+      const symbols = source
+        .filter((item) => item.symbol && item.displaySymbol && item.description)
+        .slice(0, normalizedLimit)
+
+      const payload = { symbols }
+      this.nasdaqSymbolsCache.set(normalizedLimit, {
+        data: payload,
+        expiresAt: Date.now() + NASDAQ_SYMBOLS_CACHE_TTL_MS,
+      })
+
+      return payload
+    })()
+
+    this.nasdaqSymbolsInFlight.set(normalizedLimit, request)
+
+    try {
+      return await request
+    } finally {
+      this.nasdaqSymbolsInFlight.delete(normalizedLimit)
+    }
   }
 
   async getSymbolIntelligence(symbol: string): Promise<SymbolIntelligence> {
     const normalizedSymbol = symbol.toUpperCase().trim()
+    const cached = this.symbolIntelligenceCache.get(normalizedSymbol)
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data
+    }
+
+    const inFlight = this.symbolIntelligenceInFlight.get(normalizedSymbol)
+    if (inFlight) {
+      return inFlight
+    }
+
+    const request = this.buildSymbolIntelligence(normalizedSymbol)
+    this.symbolIntelligenceInFlight.set(normalizedSymbol, request)
+
+    try {
+      const payload = await request
+      this.symbolIntelligenceCache.set(normalizedSymbol, {
+        data: payload,
+        expiresAt: Date.now() + SYMBOL_INTELLIGENCE_CACHE_TTL_MS,
+      })
+      return payload
+    } finally {
+      this.symbolIntelligenceInFlight.delete(normalizedSymbol)
+    }
+  }
+
+  private async buildSymbolIntelligence(normalizedSymbol: string): Promise<SymbolIntelligence> {
     const now = new Date()
     const newsTo = this.formatDate(now)
     const newsFrom = this.formatDate(new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000))
@@ -218,6 +244,96 @@ export class PublicService {
       },
       aiInsight,
       bedrockInput,
+    }
+  }
+
+  private async getCachedLatestNews(): Promise<LatestNews['news']> {
+    const cached = this.latestNewsCache
+    if (cached) {
+      if (cached.expiresAt <= Date.now() && !this.latestNewsInFlight) {
+        void this.refreshLatestNews()
+      }
+      return cached.data
+    }
+
+    return this.refreshLatestNews()
+  }
+
+  private async refreshLatestNews(): Promise<LatestNews['news']> {
+    if (this.latestNewsInFlight) {
+      return this.latestNewsInFlight
+    }
+
+    this.latestNewsInFlight = (async () => {
+      const rawNews = await this.finnhubProvider.getMarketNews('general')
+      const mapped = rawNews
+        .filter((item) => item.headline && item.summary && item.url)
+        .sort((a, b) => b.datetime - a.datetime)
+        .map((item) => ({
+          title: item.headline,
+          summary: item.summary,
+          readMoreLink: item.url,
+          source: item.source,
+          datetime: item.datetime,
+          image: item.image ?? null,
+          related: item.related ?? '',
+          category: item.category ?? 'general',
+        }))
+
+      this.latestNewsCache = {
+        data: mapped,
+        expiresAt: Date.now() + MARKET_NEWS_CACHE_TTL_MS,
+      }
+
+      return mapped
+    })()
+
+    try {
+      return await this.latestNewsInFlight
+    } finally {
+      this.latestNewsInFlight = null
+    }
+  }
+
+  private async refreshMarketOverview(symbolLimit: number): Promise<MarketOverview> {
+    if (this.marketOverviewInFlight) {
+      return this.marketOverviewInFlight
+    }
+
+    this.marketOverviewInFlight = (async () => {
+      const nasdaqSymbols = await this.getNasdaqSymbols(symbolLimit)
+      const symbols = nasdaqSymbols.symbols.map((item) => item.symbol)
+      const quotes = await this.getQuotesInBatches(symbols)
+
+      const validQuotes: MarketQuote[] = quotes
+        .filter((quote) => typeof quote.currentPrice === 'number' && !Number.isNaN(quote.currentPrice) && quote.currentPrice > 0)
+        .map((quote) => ({
+          symbol: quote.symbol,
+          price: quote.currentPrice,
+          change: quote.change,
+          changePercent: quote.changePercent,
+          high: quote.high,
+          low: quote.low,
+          open: quote.open,
+          previousClose: quote.previousClose,
+        }))
+
+      const gainers = [...validQuotes].sort((a, b) => b.changePercent - a.changePercent).slice(0, 5)
+      const losers = [...validQuotes].sort((a, b) => a.changePercent - b.changePercent).slice(0, 5)
+
+      const overview = { gainers, losers }
+      this.marketOverviewCache = {
+        data: overview,
+        expiresAt: Date.now() + MARKET_OVERVIEW_CACHE_TTL_MS,
+      }
+
+      return overview
+    })()
+
+    try {
+      return await this.marketOverviewInFlight
+    } finally {
+      this.marketOverviewInFlight = null
     }
   }
 

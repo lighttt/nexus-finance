@@ -104,6 +104,7 @@ const insightCards = computed(() => {
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--nf-muted)]">AI Insights</p>
             <h2 class="mt-2 text-2xl font-semibold tracking-tight">AI risk outlook</h2>
+            <p class="mt-1 text-xs text-[var(--nf-muted)]">AI-generated interpretation</p>
           </div>
           <span class="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--nf-muted)] shadow-sm">
             {{ props.intelligence.aiInsight ? 'Updated now' : 'Unavailable' }}

@@ -29,6 +29,7 @@ const pageTitle = 'Real-Time NASDAQ Intelligence'
 const pageDescription = 'Track top market movers and latest company headlines with Nexus Finance.'
 const canonicalUrl = config.public.siteUrl
 const apiBase = config.public.apiBase
+const dashboardCache = useState<DashboardPayload | undefined>('dashboard-cache', () => undefined)
 
 useSeoMeta({
   title: pageTitle,
@@ -68,7 +69,15 @@ const {
     news: latestNews.news,
     hasMore: latestNews.hasMore,
   }
+}, {
+  default: () => dashboardCache.value || { gainers: [], losers: [], news: [], hasMore: false },
 })
+
+watch(dashboard, (value) => {
+  if (value) {
+    dashboardCache.value = value
+  }
+}, { immediate: true })
 </script>
 
 <template>

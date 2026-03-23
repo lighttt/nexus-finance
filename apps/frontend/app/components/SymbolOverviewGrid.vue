@@ -61,6 +61,7 @@ const formatPercent = (value: number | null | undefined) => {
 
     <article class="rounded-2xl border border-[var(--nf-line)] bg-white/85 p-5 shadow-sm">
       <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--nf-muted)]">Quick Take</p>
+      <p class="mt-1 text-xs text-[var(--nf-muted)]">Rule-based snapshot</p>
       <div class="mt-4 space-y-3">
         <div class="rounded-xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-3">
           <div class="flex items-center justify-between gap-3">
