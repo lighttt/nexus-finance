@@ -12,6 +12,7 @@ const companyLabel = computed(() => {
   const fromQuery = typeof route.query.company === 'string' ? route.query.company.trim() : ''
   return fromQuery
 })
+const symbolCache = useState<Record<string, SymbolIntelligenceResponse | undefined>>('symbol-intelligence-cache', () => ({}))
 const pageTitle = computed(() => `${symbol.value} Overview | Nexus Finance`)
 const pageDescription = computed(() => `Live price, recent news, earnings, and AI insights for ${symbol.value}.`)
 const canonicalUrl = computed(() =>
@@ -43,11 +44,45 @@ const {
   pending,
   error,
   refresh,
+  execute,
+  clear,
 } = useFetch<SymbolIntelligenceResponse>('/api/symbol-intelligence', {
+  key: computed(() => `symbol-intelligence-${symbol.value}`),
   query: computed(() => ({ symbol: symbol.value })),
   server: false,
   lazy: true,
+  immediate: false,
+  default: () => symbolCache.value[symbol.value] ?? undefined,
 })
+
+watch([symbol, intelligence], ([currentSymbol, value]) => {
+  if (value) {
+    symbolCache.value[currentSymbol] = value
+  }
+}, { immediate: true })
+
+watch(symbol, async (currentSymbol) => {
+  const cached = symbolCache.value[currentSymbol]
+  if (cached) {
+    intelligence.value = cached
+    return
+  }
+
+  clear()
+  await execute()
+})
+
+onMounted(async () => {
+  if (!intelligence.value && !pending.value) {
+    await execute()
+  }
+})
+
+const retrySymbolLoad = async () => {
+  delete symbolCache.value[symbol.value]
+  clear()
+  await refresh()
+}
 </script>
 
 <template>
@@ -91,7 +126,7 @@ const {
       <p class="font-semibold">Unable to load this company page.</p>
       <button
         class="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-medium hover:bg-rose-100"
-        @click="refresh()"
+        @click="retrySymbolLoad"
       >
         Retry
       </button>

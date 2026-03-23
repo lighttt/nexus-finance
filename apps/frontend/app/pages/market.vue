@@ -46,6 +46,7 @@ interface NasdaqTableResponse {
 }
 
 const search = ref('')
+const tableCache = useState<NasdaqTableResponse | null>('nasdaq-table-cache', () => null)
 const headers: Header[] = [
   { text: 'Symbol', value: 'symbol', sortable: true },
   { text: 'Display', value: 'displaySymbol', sortable: true },
@@ -61,9 +62,12 @@ const {
   execute,
   clear,
 } = useFetch<NasdaqTableResponse>('/api/nasdaq-table', {
+  key: 'nasdaq-table-300',
   query: { limit: 300 },
   server: false,
   lazy: true,
+  immediate: false,
+  default: () => tableCache.value ?? undefined,
 })
 
 const retrying = ref(false)
@@ -72,6 +76,7 @@ const hasTableError = computed(() => Boolean(error.value) && !tableLoading.value
 
 const retryTableLoad = async () => {
   retrying.value = true
+  tableCache.value = null
   clear()
 
   try {
@@ -102,6 +107,18 @@ const bodyItemClassName = (column: string) => {
   if (column === 'open') return 'nf-open-cell'
   return ''
 }
+
+watch(table, (value) => {
+  if (value) {
+    tableCache.value = value
+  }
+}, { immediate: true })
+
+onMounted(async () => {
+  if (!table.value && !pending.value) {
+    await execute()
+  }
+})
 </script>
 
 <template>
