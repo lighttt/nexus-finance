@@ -12,10 +12,10 @@ const formatPercent = (value: number | null | undefined) => {
 </script>
 
 <template>
-  <article class="rounded-2xl border border-[var(--nf-line)] bg-white/85 p-5 shadow-sm">
+  <article class="rounded-2xl border border-[var(--nf-line)] bg-white/85 p-4 shadow-sm">
     <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--nf-muted)]">Earnings History</p>
-    <div v-if="!props.items.length" class="mt-4 text-sm text-[var(--nf-muted)]">No earnings data available.</div>
-    <div v-else class="mt-4 space-y-3">
+    <div v-if="!props.items.length" class="mt-3 rounded-xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-3.5 text-sm text-[var(--nf-muted)]">No earnings data available.</div>
+    <div v-else class="mt-3 space-y-3">
       <div
         v-for="item in props.items"
         :key="`${item.period}-${item.quarter}`"

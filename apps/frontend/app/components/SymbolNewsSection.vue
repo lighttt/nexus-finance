@@ -16,7 +16,7 @@ const formatDateTime = (value: number) =>
 </script>
 
 <template>
-  <article class="rounded-2xl border border-[var(--nf-line)] bg-white/85 p-5 shadow-sm">
+  <article class="rounded-2xl border border-[var(--nf-line)] bg-white/85 p-4 shadow-sm">
     <div class="flex items-center justify-between gap-4">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--nf-muted)]">Recent Company News</p>
@@ -27,18 +27,18 @@ const formatDateTime = (value: number) =>
       </span>
     </div>
 
-    <div v-if="!props.items.length" class="mt-4 rounded-xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-4 text-sm text-[var(--nf-muted)]">
+    <div v-if="!props.items.length" class="mt-3 rounded-xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-3.5 text-sm text-[var(--nf-muted)]">
       No company news available right now.
     </div>
 
-    <div v-else class="mt-4 space-y-4">
+    <div v-else class="mt-3 space-y-3">
       <a
         v-for="item in props.items.slice(0, 6)"
         :key="`${item.readMoreLink}-${item.datetime}`"
         :href="item.readMoreLink"
         target="_blank"
         rel="noreferrer"
-        class="grid gap-4 rounded-2xl border border-[var(--nf-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(246,249,244,0.95))] p-4 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-sm md:grid-cols-[124px_1fr]"
+        class="grid gap-3 rounded-2xl border border-[var(--nf-line)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(246,249,244,0.95))] p-3.5 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-sm md:grid-cols-[118px_1fr]"
       >
         <div class="overflow-hidden rounded-xl border border-[var(--nf-line)] bg-[var(--nf-surface)]">
           <img
