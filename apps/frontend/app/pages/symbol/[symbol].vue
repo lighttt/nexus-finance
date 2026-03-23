@@ -8,8 +8,12 @@ definePageMeta({
 const config = useRuntimeConfig()
 const route = useRoute()
 const symbol = computed(() => String(route.params.symbol || '').toUpperCase())
-const pageTitle = computed(() => `${symbol.value} Intelligence | Nexus Finance`)
-const pageDescription = computed(() => `Live quote, news, earnings, and analyst signals for ${symbol.value}.`)
+const companyLabel = computed(() => {
+  const fromQuery = typeof route.query.company === 'string' ? route.query.company.trim() : ''
+  return fromQuery
+})
+const pageTitle = computed(() => `${symbol.value} Overview | Nexus Finance`)
+const pageDescription = computed(() => `Live price, recent news, earnings, and AI insights for ${symbol.value}.`)
 const canonicalUrl = computed(() =>
   config.public.siteUrl ? `${config.public.siteUrl}/symbol/${encodeURIComponent(symbol.value)}` : '',
 )
@@ -48,7 +52,7 @@ const {
 
 <template>
   <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-    <SymbolHeader :symbol="symbol" />
+    <SymbolHeader :symbol="symbol" :company-name="companyLabel" />
 
     <section v-if="pending" class="space-y-4">
       <div class="grid gap-4 lg:grid-cols-3">
@@ -84,7 +88,7 @@ const {
     </section>
 
     <section v-else-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
-      <p class="font-semibold">Unable to load symbol intelligence.</p>
+      <p class="font-semibold">Unable to load this company page.</p>
       <button
         class="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-medium hover:bg-rose-100"
         @click="refresh()"

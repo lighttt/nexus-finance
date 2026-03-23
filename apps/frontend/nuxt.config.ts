@@ -3,7 +3,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', '@clerk/nuxt'],
+  modules: ['@nuxtjs/tailwindcss', '@clerk/nuxt', '@nuxt/icon'],
   css: ['~/assets/css/main.css', 'vue3-easy-data-table/dist/style.css'],
   runtimeConfig: {
     public: {

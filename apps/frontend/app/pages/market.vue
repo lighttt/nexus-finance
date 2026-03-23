@@ -175,7 +175,14 @@ const bodyItemClassName = (column: string) => {
           >
             <template #item-open="item">
               <NuxtLink
-                :to="item.symbol ? `/symbol/${encodeURIComponent(item.symbol)}` : '/market'"
+                :to="
+                  item.symbol
+                    ? {
+                        path: `/symbol/${encodeURIComponent(item.symbol)}`,
+                        query: item.description ? { company: item.description } : undefined,
+                      }
+                    : '/market'
+                "
                 class="row-open-btn inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--nf-line)] bg-white text-sm font-semibold text-[var(--nf-muted)]"
                 aria-label="Open symbol details"
               >

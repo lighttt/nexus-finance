@@ -16,6 +16,7 @@ const statusError = ref(false)
 const links = [
   { label: 'Dashboard', to: '/' },
   { label: 'Full Table', to: '/market' },
+  { label: 'All News', to: '/news' },
 ]
 
 const isActiveRoute = (path: string): boolean => {
@@ -97,9 +98,9 @@ onUnmounted(() => {
             >
               {{
                 loadingStatus
-                  ? 'Market: Loading'
+                  ? 'Market: Checking'
                   : statusError
-                    ? 'Market: Unavailable'
+                    ? 'Market: Status unavailable'
                     : marketStatus?.isOpen
                       ? 'Market: Open'
                       : 'Market: Closed'
