@@ -45,7 +45,6 @@ interface NasdaqTableResponse {
   symbols: NasdaqSymbol[]
 }
 
-const { isLoaded, isSignedIn } = useUser()
 const search = ref('')
 const headers: Header[] = [
   { text: 'Symbol', value: 'symbol', sortable: true },
@@ -59,14 +58,28 @@ const {
   data: table,
   pending,
   error,
-  refresh,
+  execute,
+  clear,
 } = useFetch<NasdaqTableResponse>('/api/nasdaq-table', {
   query: { limit: 300 },
   server: false,
   lazy: true,
 })
 
-const tableLoading = computed(() => pending.value || (!table.value && !error.value))
+const retrying = ref(false)
+const tableLoading = computed(() => pending.value || retrying.value || (!table.value && !error.value))
+const hasTableError = computed(() => Boolean(error.value) && !tableLoading.value)
+
+const retryTableLoad = async () => {
+  retrying.value = true
+  clear()
+
+  try {
+    await execute()
+  } finally {
+    retrying.value = false
+  }
+}
 
 const filteredSymbols = computed(() => {
   const source = table.value?.symbols ?? []
@@ -117,13 +130,13 @@ const bodyItemClassName = (column: string) => {
     </section>
 
     <section class="mt-4 rounded-2xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-4 shadow-sm">
-      <div v-if="error" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+      <div v-if="hasTableError" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
         <p class="font-semibold">Unable to load full NASDAQ table.</p>
         <button
           class="mt-3 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-medium hover:bg-rose-100"
-          @click="refresh()"
+          @click="retryTableLoad"
         >
-          Retry
+          {{ retrying ? 'Retrying...' : 'Retry' }}
         </button>
       </div>
 
@@ -162,7 +175,14 @@ const bodyItemClassName = (column: string) => {
           >
             <template #item-open="item">
               <NuxtLink
-                :to="item.symbol ? `/symbol/${encodeURIComponent(item.symbol)}` : '/market'"
+                :to="
+                  item.symbol
+                    ? {
+                        path: `/symbol/${encodeURIComponent(item.symbol)}`,
+                        query: item.description ? { company: item.description } : undefined,
+                      }
+                    : '/market'
+                "
                 class="row-open-btn inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--nf-line)] bg-white text-sm font-semibold text-[var(--nf-muted)]"
                 aria-label="Open symbol details"
               >

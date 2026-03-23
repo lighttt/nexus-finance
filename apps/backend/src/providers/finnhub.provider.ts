@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 import {
+  BasicFinancialMetrics,
   CompanyNewsData,
   EarningsCalendarItem,
   EarningsItem,
@@ -100,6 +101,16 @@ interface FinnhubEarningsCalendarResponse {
     symbol: string
     year: number
   }>
+}
+
+interface FinnhubMetricsResponse {
+  metric?: {
+    beta?: number
+    ['52WeekHigh']?: number
+    ['52WeekLow']?: number
+    ['52WeekPriceReturnDaily']?: number
+    ['10DayAverageTradingVolume']?: number
+  }
 }
 
 export class FinnhubProvider {
@@ -207,6 +218,28 @@ export class FinnhubProvider {
     })
 
     return data.earningsCalendar ?? []
+  }
+
+  async getBasicFinancialMetrics(symbol: string): Promise<BasicFinancialMetrics | null> {
+    const { data } = await this.httpClient.get<FinnhubMetricsResponse>('/stock/metric', {
+      params: {
+        symbol,
+        metric: 'all',
+        token: this.apiKey,
+      },
+    })
+
+    if (!data.metric) {
+      return null
+    }
+
+    return {
+      beta: data.metric.beta ?? null,
+      week52High: data.metric['52WeekHigh'] ?? null,
+      week52Low: data.metric['52WeekLow'] ?? null,
+      week52PriceReturnDaily: data.metric['52WeekPriceReturnDaily'] ?? null,
+      tenDayAverageTradingVolume: data.metric['10DayAverageTradingVolume'] ?? null,
+    }
   }
 
   async getUsSymbols(): Promise<NasdaqSymbol[]> {

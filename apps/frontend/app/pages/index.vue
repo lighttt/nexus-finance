@@ -21,6 +21,7 @@ interface DashboardPayload {
     related: string
     category: string
   }[]
+  hasMore: boolean
 }
 
 const config = useRuntimeConfig()
@@ -45,6 +46,7 @@ useHead(() => ({
   link: canonicalUrl ? [{ rel: 'canonical', href: canonicalUrl }] : [],
 }))
 
+
 const {
   data: dashboard,
   pending,
@@ -57,13 +59,14 @@ const {
 
   const [marketOverview, latestNews] = await Promise.all([
     $fetch<{ gainers: MarketItem[]; losers: MarketItem[] }>(`${apiBase}/market-overview`),
-    $fetch<{ news: DashboardPayload['news'] }>(`${apiBase}/news`),
+    $fetch<{ news: DashboardPayload['news']; hasMore: boolean }>(`${apiBase}/news`),
   ])
 
   return {
     gainers: marketOverview.gainers,
     losers: marketOverview.losers,
     news: latestNews.news,
+    hasMore: latestNews.hasMore,
   }
 })
 </script>
@@ -107,6 +110,8 @@ const {
       </div>
 
       <NewsFeedCard :items="dashboard.news" />
+
+      
     </section>
   </main>
 </template>

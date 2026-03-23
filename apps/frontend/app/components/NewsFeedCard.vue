@@ -1,4 +1,7 @@
 <script setup lang="ts">
+const { isSignedIn } = useAuth()
+const route = useRoute()
+
 interface NewsItem {
   title: string
   summary: string
@@ -15,6 +18,8 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
+const showAllNewsLink = computed(() => isSignedIn.value && route.path !== '/news')
+
 const formatDate = (unixSeconds: number) =>
   new Date(unixSeconds * 1000).toLocaleString('en-US', {
     month: 'short',
@@ -24,13 +29,20 @@ const formatDate = (unixSeconds: number) =>
   })
 </script>
 
+
 <template>
   <section class="rounded-2xl border border-[var(--nf-line)] bg-[var(--nf-surface)] p-5 shadow-sm">
-    <div class="mb-4 flex items-center justify-between">
+    <div   v-if="showAllNewsLink" class="mb-4 flex items-center justify-between">
       <h2 class="text-base font-semibold tracking-tight">Latest News</h2>
-      <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-[var(--nf-muted)]">
-        {{ props.items.length }} updates
-      </span>
+
+      <div class="flex justify-end">
+        <NuxtLink
+          to="/news"
+          class="inline-flex rounded-lg border border-[var(--nf-line)] bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+        >
+          See all news
+        </NuxtLink>
+      </div>
     </div>
 
     <ul v-if="props.loading" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

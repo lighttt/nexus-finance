@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { env } from '../../config/env'
+import { BedrockProvider } from '../../providers/bedrock.provider'
 import { FinnhubProvider } from '../../providers/finnhub.provider'
 import {
   HealthResponseDto,
@@ -12,7 +13,13 @@ import {
 import { PublicService } from './public.service'
 
 const publicService = new PublicService(
-  new FinnhubProvider(env.finnhubApiKey)
+  new FinnhubProvider(env.finnhubApiKey),
+  BedrockProvider.isConfigured(env.awsRegion, env.awsBearerTokenBedrock)
+    ? new BedrockProvider({
+        region: env.awsRegion,
+        bearerToken: env.awsBearerTokenBedrock,
+      })
+    : null,
 )
 
 export const getHealth = (_req: Request, res: Response<HealthResponseDto>): Response => {
@@ -46,11 +53,16 @@ export const getMarketStatus = async (
 }
 
 export const getLatestNews = async (
-  _req: Request,
+  req: Request,
   res: Response<LatestNewsResponseDto>
 ): Promise<Response> => {
   try {
-    const payload = await publicService.getLatestNews()
+    const pageParam = Number(req.query.page)
+    const limitParam = Number(req.query.limit)
+    const payload = await publicService.getLatestNewsPage(
+      Number.isFinite(pageParam) ? pageParam : 1,
+      Number.isFinite(limitParam) ? limitParam : 10,
+    )
     return res.json(payload)
   } catch (error) {
     console.error('[PublicController] Failed to fetch latest news:', error)

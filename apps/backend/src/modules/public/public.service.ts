@@ -1,3 +1,4 @@
+import { BedrockProvider } from '../../providers/bedrock.provider'
 import { FinnhubProvider } from '../../providers/finnhub.provider'
 import {
   LatestNews,
@@ -17,7 +18,10 @@ const MARKET_OVERVIEW_CACHE_TTL_MS = 60 * 1000
 export class PublicService {
   private marketOverviewCache: { expiresAt: number; data: MarketOverview } | null = null
 
-  constructor(private readonly finnhubProvider: FinnhubProvider) {}
+  constructor(
+    private readonly finnhubProvider: FinnhubProvider,
+    private readonly bedrockProvider: BedrockProvider | null = null,
+  ) {}
 
   getHealth() {
     return { ok: true }
@@ -63,12 +67,17 @@ export class PublicService {
   }
 
   async getLatestNews(): Promise<LatestNews> {
-    const rawNews = await this.finnhubProvider.getMarketNews('general')
+    return this.getLatestNewsPage(1, 10)
+  }
 
-    const news = rawNews
+  async getLatestNewsPage(page = 1, limit = 10): Promise<LatestNews> {
+    const rawNews = await this.finnhubProvider.getMarketNews('general')
+    const normalizedPage = Math.max(1, page)
+    const normalizedLimit = Math.max(1, Math.min(limit, 30))
+
+    const allNews = rawNews
       .filter((item) => item.headline && item.summary && item.url)
       .sort((a, b) => b.datetime - a.datetime)
-      .slice(0, 10)
       .map((item) => ({
         title: item.headline,
         summary: item.summary,
@@ -80,7 +89,16 @@ export class PublicService {
         category: item.category ?? 'general',
       }))
 
-    return { news }
+    const startIndex = (normalizedPage - 1) * normalizedLimit
+    const news = allNews.slice(startIndex, startIndex + normalizedLimit)
+
+    return {
+      news,
+      page: normalizedPage,
+      limit: normalizedLimit,
+      total: allNews.length,
+      hasMore: startIndex + normalizedLimit < allNews.length,
+    }
   }
 
   async getNasdaqSymbols(limit = 200): Promise<NasdaqSymbols> {
@@ -103,12 +121,13 @@ export class PublicService {
     const newsFrom = this.formatDate(new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000))
     const earningsTo = this.formatDate(new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000))
 
-    const [quote, companyNewsRaw, earnings, recommendationTrend, earningsCalendar] = await Promise.all([
+    const [quote, companyNewsRaw, earnings, recommendationTrend, earningsCalendar, metrics] = await Promise.all([
       this.finnhubProvider.getQuote(normalizedSymbol),
       this.finnhubProvider.getCompanyNews(normalizedSymbol, newsFrom, newsTo),
       this.finnhubProvider.getCompanyEarnings(normalizedSymbol, 4),
       this.finnhubProvider.getRecommendationTrends(normalizedSymbol),
       this.finnhubProvider.getEarningsCalendar(normalizedSymbol, newsTo, earningsTo),
+      this.finnhubProvider.getBasicFinancialMetrics(normalizedSymbol),
     ])
 
     const companyNews: SymbolNewsItem[] = companyNewsRaw
@@ -134,6 +153,48 @@ export class PublicService {
     const eventRisk = this.calculateEventRisk(earnings, recommendationTrend, nextEarnings)
     const downsideProtection = this.calculateDownsideProtection(quote.changePercent, sentimentDivergence)
 
+    const bedrockInput = {
+      symbol: normalizedSymbol,
+      quote: {
+        price: quote.currentPrice,
+        change: quote.change,
+        changePercent: quote.changePercent,
+        dayHigh: quote.high,
+        dayLow: quote.low,
+        dayOpen: quote.open,
+        previousClose: quote.previousClose,
+      },
+      metrics,
+      topNews: companyNews.slice(0, 5).map((item) => ({
+        headline: item.title,
+        source: item.source,
+        publishedAt: item.datetime,
+      })),
+      earningsHistory: earnings.slice(0, 4).map((item) => ({
+        period: item.period,
+        surprisePercent: item.surprisePercent,
+      })),
+      recommendationTrend: recommendationTrend.slice(0, 3).map((item) => ({
+        period: item.period,
+        buy: item.buy,
+        hold: item.hold,
+        sell: item.sell,
+        strongBuy: item.strongBuy,
+        strongSell: item.strongSell,
+      })),
+      nextEarningsDate: nextEarnings?.date ?? null,
+    }
+
+    let aiInsight = null
+    if (this.bedrockProvider) {
+      try {
+        aiInsight = await this.bedrockProvider.generateSymbolInsight(bedrockInput)
+      } catch (error) {
+        console.error('[PublicService] Bedrock insight generation failed:', error)
+        aiInsight = this.bedrockProvider.getFallbackSymbolInsight(bedrockInput)
+      }
+    }
+
     return {
       symbol: normalizedSymbol,
       quote: {
@@ -149,41 +210,14 @@ export class PublicService {
       earnings,
       recommendationTrend: recommendationTrend.slice(0, 3),
       nextEarnings,
+      metrics,
       insight: {
         sentimentDivergence,
         eventRisk,
         downsideProtection,
       },
-      bedrockInput: {
-        symbol: normalizedSymbol,
-        quote: {
-          price: quote.currentPrice,
-          change: quote.change,
-          changePercent: quote.changePercent,
-          dayHigh: quote.high,
-          dayLow: quote.low,
-          dayOpen: quote.open,
-          previousClose: quote.previousClose,
-        },
-        topNews: companyNews.slice(0, 5).map((item) => ({
-          headline: item.title,
-          source: item.source,
-          publishedAt: item.datetime,
-        })),
-        earningsHistory: earnings.slice(0, 4).map((item) => ({
-          period: item.period,
-          surprisePercent: item.surprisePercent,
-        })),
-        recommendationTrend: recommendationTrend.slice(0, 3).map((item) => ({
-          period: item.period,
-          buy: item.buy,
-          hold: item.hold,
-          sell: item.sell,
-          strongBuy: item.strongBuy,
-          strongSell: item.strongSell,
-        })),
-        nextEarningsDate: nextEarnings?.date ?? null,
-      },
+      aiInsight,
+      bedrockInput,
     }
   }
 

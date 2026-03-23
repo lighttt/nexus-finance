@@ -77,3 +77,114 @@ body {
   opacity: 1;
   transform: translateX(0);
 }
+
+@keyframes nf-ai-panel-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.nf-ai-panel {
+  position: relative;
+  box-shadow:
+    0 18px 40px rgba(117, 133, 88, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.nf-ai-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(241, 215, 128, 0.24), transparent 28%),
+    radial-gradient(circle at 82% 22%, rgba(96, 183, 154, 0.18), transparent 26%),
+    radial-gradient(circle at 50% 88%, rgba(226, 88, 88, 0.12), transparent 24%);
+  pointer-events: none;
+}
+
+.nf-ai-gauge-arc {
+  filter: drop-shadow(0 6px 14px rgba(229, 167, 52, 0.24));
+  transition: stroke-dashoffset 1s ease;
+}
+
+.nf-ai-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.nf-ai-card {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.66);
+  backdrop-filter: blur(10px);
+}
+
+.nf-ai-card-soft {
+  border: 1px solid var(--nf-line);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.nf-ai-compare-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.nf-ai-compare-card {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.nf-ai-summary-copy {
+  max-width: 56rem;
+}
+
+.nf-ai-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.nf-ai-stat-tile {
+  border: 1px solid var(--nf-line);
+  background: var(--nf-surface);
+}
+
+.nf-ai-evidence-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--nf-line);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 6px 14px rgba(117, 133, 88, 0.05);
+}
+
+.nf-ai-evidence-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #14b86a, #f3c84d, #e45858);
+}
+
+@media (min-width: 768px) {
+  .nf-ai-compare-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .nf-ai-compare-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nf-ai-panel {
+    animation: nf-ai-panel-float 8s ease-in-out infinite;
+  }
+}

@@ -27,6 +27,10 @@ export interface NewsArticle {
 
 export interface LatestNews {
   news: NewsArticle[]
+  page: number
+  limit: number
+  total: number
+  hasMore: boolean
 }
 
 export interface NasdaqSymbol {
@@ -90,6 +94,14 @@ export interface RecommendationTrendItem {
   symbol: string
 }
 
+export interface BasicFinancialMetrics {
+  beta: number | null
+  week52High: number | null
+  week52Low: number | null
+  week52PriceReturnDaily: number | null
+  tenDayAverageTradingVolume: number | null
+}
+
 export interface EarningsCalendarItem {
   date: string
   epsActual: number | null
@@ -127,6 +139,37 @@ export interface SymbolInsightScores {
   downsideProtection: 'Low' | 'Medium' | 'High'
 }
 
+export interface SymbolAiSentimentInsight {
+  marketDriver: 'news-driven' | 'technically-driven' | 'event-driven' | 'liquidity-driven' | 'mixed'
+  sentimentDivergenceScore: number
+  divergenceRisk: 'Low' | 'Medium' | 'High'
+  summary: string
+}
+
+export interface SymbolAiStructuralInsight {
+  marketPhase: 'Accumulation' | 'Distribution' | 'Mark-up' | 'Mark-down' | 'Range-bound'
+  supportLevel: number | null
+  resistanceLevel: number | null
+  trendSustainabilityScore: number
+  summary: string
+}
+
+export interface SymbolAiVolatilityInsight {
+  estimatedMaxDrawdownPercent: number
+  downsideProtection: 'Low' | 'Medium' | 'High'
+  summary: string
+}
+
+export interface SymbolAiInsight {
+  provider: 'bedrock'
+  modelId: string
+  confidence: 'Low' | 'Medium' | 'High'
+  sentimentCorrelation: SymbolAiSentimentInsight
+  structuralHealth: SymbolAiStructuralInsight
+  volatilityStress: SymbolAiVolatilityInsight
+  signals: string[]
+}
+
 export interface SymbolIntelligence {
   symbol: string
   quote: SymbolQuoteCard
@@ -134,10 +177,13 @@ export interface SymbolIntelligence {
   earnings: EarningsItem[]
   recommendationTrend: RecommendationTrendItem[]
   nextEarnings: EarningsCalendarItem | null
+  metrics: BasicFinancialMetrics | null
   insight: SymbolInsightScores
+  aiInsight: SymbolAiInsight | null
   bedrockInput: {
     symbol: string
     quote: SymbolQuoteCard
+    metrics: BasicFinancialMetrics | null
     topNews: Array<{
       headline: string
       source: string
